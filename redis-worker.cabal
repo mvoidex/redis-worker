@@ -1,0 +1,23 @@
+name:                redis-worker
+version:             0.1.0.0
+synopsis:            Write workers using redis as data provider.
+homepage:            http://github.com/mvoidex/redis-worker
+license:             BSD3
+license-file:        LICENSE
+author:              Alexandr `Voidex` Ruchkin
+maintainer:          voidex@live.com
+build-type:          Simple
+cabal-version:       >= 1.8
+
+library
+  hs-source-dirs: src
+  exposed-modules:
+    System.Worker.Redis
+  other-modules:
+  build-depends:
+    base             == 4.5.*,
+    hedis            == 0.4.*,
+    containers       == 0.4.*,
+    bytestring       == 0.9.*,
+    transformers     == 0.2.*,
+    mtl              >= 2.0 && < 2.2
