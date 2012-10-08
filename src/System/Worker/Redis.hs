@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 -- | Module provides functions to work asynchrously on tasks stored in redis.
 --
 -- Typical usage is
@@ -36,6 +38,7 @@ module System.Worker.Redis (
   ) where
 
 import Control.Monad
+import Control.Monad.CatchIO
 import Control.Monad.Trans
 import Control.Monad.Reader
 import Control.Monad.IO.Class
@@ -43,7 +46,9 @@ import Data.ByteString (ByteString)
 import qualified Data.Map as M
 import Database.Redis
 
-type TaskMonad m a = ReaderT Connection m a
+newtype TaskMonad m a = TaskMonad {
+  taskMonad :: ReaderT Connection m a }
+    deriving (Functor, Monad, MonadIO, MonadCatchIO, MonadReader Connection)
 
 redisInTask :: (MonadIO m) => Redis a -> TaskMonad m a 
 redisInTask act = do
@@ -51,7 +56,7 @@ redisInTask act = do
   liftIO $ runRedis conn act
 
 runTask :: (MonadIO m) => Connection -> TaskMonad m a -> m a
-runTask conn act = runReaderT act conn
+runTask conn (TaskMonad act) = runReaderT act conn
 
 -- | General function to process tasks
 --

@@ -20,4 +20,5 @@ library
     containers       == 0.4.*,
     bytestring       == 0.9.*,
     transformers     == 0.2.*,
+    MonadCatchIO-transformers == 0.3.*,
     mtl              >= 2.0 && < 2.2
