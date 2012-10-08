@@ -63,7 +63,7 @@ runTask conn (TaskMonad act) = runReaderT act conn
 
 -- | General function to process tasks
 --
--- Firstly, it moves all tasks from processing-list back to task-list, then starts to pops tasks from task-list
+-- Firstly, it moves all tasks from processing-list back to task-list, then starts popping tasks from task-list
 --
 processTasks :: (MonadTask m) => ByteString -> ByteString -> (ByteString -> M.Map ByteString ByteString -> m a) -> (ByteString -> m a) -> m b
 processTasks tl pl process processFail = do
@@ -90,7 +90,7 @@ popTaskId tl pl timeout process = do
   inTask $ lrem pl 0 i
   return v
 
--- | Pop one task like @popTaskId@, but takes one additional callback for fail on getting (hmgetall) data
+-- | Pops one task like @popTaskId@, but takes one additional callback for fail on getting (hmgetall) data
 popTask :: (MonadTask m) => ByteString -> ByteString -> Integer -> (ByteString -> M.Map ByteString ByteString -> m a) -> (ByteString -> m a) -> m a
 popTask tl pl timeout process processFail = popTaskId tl pl timeout process' where
   process' i = do
