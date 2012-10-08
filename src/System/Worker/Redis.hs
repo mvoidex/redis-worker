@@ -20,7 +20,7 @@
 module System.Worker.Redis (
   -- * Types
   TaskMonad,
-  redisInTask,
+  MonadTask(..),
   runTask,
 
   -- * Strategies
@@ -50,10 +50,13 @@ newtype TaskMonad m a = TaskMonad {
   taskMonad :: ReaderT Connection m a }
     deriving (Functor, Monad, MonadIO, MonadCatchIO, MonadReader Connection, MonadTrans)
 
-redisInTask :: (MonadIO m) => Redis a -> TaskMonad m a 
-redisInTask act = do
-  conn <- ask
-  liftIO $ runRedis conn act
+class (Monad m) => MonadTask m where
+  inTask :: Redis a -> m a
+
+instance (MonadIO m) => MonadTask (TaskMonad m) where
+  inTask act = do
+    conn <- ask
+    liftIO $ runRedis conn act
 
 runTask :: (MonadIO m) => Connection -> TaskMonad m a -> m a
 runTask conn (TaskMonad act) = runReaderT act conn
@@ -62,7 +65,7 @@ runTask conn (TaskMonad act) = runReaderT act conn
 --
 -- Firstly, it moves all tasks from processing-list back to task-list, then starts to pops tasks from task-list
 --
-processTasks :: (MonadIO m) => ByteString -> ByteString -> (ByteString -> M.Map ByteString ByteString -> TaskMonad m a) -> (ByteString -> TaskMonad m a) -> TaskMonad m b
+processTasks :: (MonadTask m) => ByteString -> ByteString -> (ByteString -> M.Map ByteString ByteString -> m a) -> (ByteString -> m a) -> m b
 processTasks tl pl process processFail = do
   reTask tl pl
   forever $ popTask tl pl 0 process processFail
@@ -80,26 +83,26 @@ pushTask :: ByteString -> ByteString -> M.Map ByteString ByteString -> Redis ()
 pushTask tl tid tdata = hmset tid (M.toList tdata) >> pushTaskId tl tid
 
 -- | Pop one task id (and push it to processing-list with auto-remove on end of callback) with block
-popTaskId :: (MonadIO m) => ByteString -> ByteString -> Integer -> (ByteString -> TaskMonad m a) -> TaskMonad m a
+popTaskId :: (MonadTask m) => ByteString -> ByteString -> Integer -> (ByteString -> m a) -> m a
 popTaskId tl pl timeout process = do
-  (Right (Just i)) <- redisInTask $ brpoplpush tl pl timeout
+  (Right (Just i)) <- inTask $ brpoplpush tl pl timeout
   v <- process i
-  redisInTask $ lrem pl 0 i
+  inTask $ lrem pl 0 i
   return v
 
 -- | Pop one task like @popTaskId@, but takes one additional callback for fail on getting (hmgetall) data
-popTask :: (MonadIO m) => ByteString -> ByteString -> Integer -> (ByteString -> M.Map ByteString ByteString -> TaskMonad m a) -> (ByteString -> TaskMonad m a) -> TaskMonad m a
+popTask :: (MonadTask m) => ByteString -> ByteString -> Integer -> (ByteString -> M.Map ByteString ByteString -> m a) -> (ByteString -> m a) -> m a
 popTask tl pl timeout process processFail = popTaskId tl pl timeout process' where
   process' i = do
-    v <- redisInTask $ hgetall i
+    v <- inTask $ hgetall i
     case v of
       Left _ -> processFail i
       Right m -> process i $ M.fromList m
 
 -- | Move all tasks from processing-list back to task-list
-reTask :: (MonadIO m) => ByteString -> ByteString -> TaskMonad m ()
+reTask :: (MonadTask m) => ByteString -> ByteString -> m ()
 reTask tl pl = do
-  (Right i) <- redisInTask $ rpoplpush pl tl
+  (Right i) <- inTask $ rpoplpush pl tl
   case i of
     Nothing -> return ()
     Just _ -> reTask tl pl

@@ -1,5 +1,5 @@
 name:                redis-worker
-version:             0.1.0.0
+version:             0.1.1.0
 synopsis:            Write workers using redis as data provider.
 homepage:            http://github.com/mvoidex/redis-worker
 license:             BSD3
@@ -16,7 +16,7 @@ library
   other-modules:
   build-depends:
     base             == 4.5.*,
-    hedis            == 0.4.*,
+    hedis            == 0.6.*,
     containers       == 0.4.*,
     bytestring       == 0.9.*,
     transformers     == 0.2.*,
