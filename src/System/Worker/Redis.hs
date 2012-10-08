@@ -48,7 +48,7 @@ import Database.Redis
 
 newtype TaskMonad m a = TaskMonad {
   taskMonad :: ReaderT Connection m a }
-    deriving (Functor, Monad, MonadIO, MonadCatchIO, MonadReader Connection)
+    deriving (Functor, Monad, MonadIO, MonadCatchIO, MonadReader Connection, MonadTrans)
 
 redisInTask :: (MonadIO m) => Redis a -> TaskMonad m a 
 redisInTask act = do
