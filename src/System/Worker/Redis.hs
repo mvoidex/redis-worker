@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
 
 -- | Module provides functions to work asynchrously on tasks stored in redis.
 --
@@ -19,7 +19,7 @@
 --
 module System.Worker.Redis (
   -- * Types
-  TaskMonad,
+  TaskMonad(..),
   MonadTask(..),
   runTask,
 
@@ -41,6 +41,7 @@ import Control.Monad
 import Control.Monad.CatchIO
 import Control.Monad.Trans
 import Control.Monad.Reader
+import Control.Monad.Error
 import Control.Monad.IO.Class
 import Data.ByteString (ByteString)
 import qualified Data.Map as M
@@ -57,6 +58,10 @@ instance (MonadIO m) => MonadTask (TaskMonad m) where
   inTask act = do
     conn <- ask
     liftIO $ runRedis conn act
+
+instance (MonadError e m) => MonadError e (TaskMonad m) where
+  throwError = TaskMonad . throwError
+  catchError (TaskMonad a) h = TaskMonad $ catchError a (taskMonad . h)
 
 runTask :: (MonadIO m) => Connection -> TaskMonad m a -> m a
 runTask conn (TaskMonad act) = runReaderT act conn
